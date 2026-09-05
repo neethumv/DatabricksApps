@@ -149,72 +149,25 @@ with tab2:
 
     prompt = st.text_area(
         "Enter a prompt",
-        placeholder="Explain GDPR in one sentence.",
-        key="model_prompt"
+        placeholder="Explain GDPR in one sentence."
     )
 
-    if st.button(
-        "Generate Response",
-        key="generate_response"
-    ):
-
-        if not prompt.strip():
-            st.warning("Please enter a prompt.")
-            st.stop()
+    if st.button("Generate Response"):
 
         try:
 
-            # Uses Databricks Apps identity
-            token = os.environ.get(
-                "DATABRICKS_TOKEN"
+            response = w.serving_endpoints.query(
+                name="system.ai.meta-llama-3-3-70b-instruct",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
             )
 
-            if not token:
-                raise Exception(
-                    "DATABRICKS_TOKEN not available."
-                )
-
-            client = OpenAI(
-                api_key=token,
-                base_url=f"{DATABRICKS_HOST}/ai-gateway/v1"
-            )
-
-            with st.spinner(
-                "Generating response..."
-            ):
-
-                response = client.chat.completions.create(
-                    model=MODEL_NAME,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    max_tokens=300
-                )
-
-            answer = (
-                response
-                .choices[0]
-                .message
-                .content
-            )
-
-            st.subheader("Prompt")
-            st.write(prompt)
-
-            st.subheader("Response")
-            st.success(answer)
-
-        except TimeoutError:
-
-            st.warning(
-                "Request timed out. Please try again."
-            )
+            st.write(response)
 
         except Exception as e:
 
-            st.error(
-                f"Model endpoint unavailable: {str(e)}"
-            )
+            st.error(str(e))
