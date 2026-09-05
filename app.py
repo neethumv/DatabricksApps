@@ -1,7 +1,7 @@
 import streamlit as st
 from databricks.sdk import WorkspaceClient
 
-st.title("Employee Table Query")
+st.title("HR Analytics Dashboard")
 
 try:
 
