@@ -20,6 +20,23 @@ SERVER_HOSTNAME = "dbc-7f6f174c-ac08.cloud.databricks.com"
 WAREHOUSE_ID = "1cfe7f2931b647ba"
 HTTP_PATH = "/sql/1.0/warehouses/1cfe7f2931b647ba"
 
+def get_user_connection():
+
+    user_token = st.context.headers.get(
+        "X-Forwarded-Access-Token"
+    )
+
+    if not user_token:
+        raise Exception(
+            "User access token not found."
+        )
+
+    return sql.connect(
+        server_hostname=SERVER_HOSTNAME,
+        http_path=HTTP_PATH,
+        access_token=user_token
+    )
+``
 # --------------------------------------------------
 # PAGE SETUP
 # --------------------------------------------------
