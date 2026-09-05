@@ -1,8 +1,7 @@
 import time
-import os
+import requests
 import streamlit as st
 from databricks.sdk import WorkspaceClient
-from openai import OpenAI
 
 # --------------------------------------------------
 # Configuration
@@ -12,10 +11,10 @@ SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
 
 MODEL_NAME = "system.ai.meta-llama-3-3-70b-instruct"
 
-DATABRICKS_HOST = "https://dbc-7f6f174c-ac08.cloud.databricks.com"
+HOST = "https://dbc-7f6f174c-ac08.cloud.databricks.com"
 
 # --------------------------------------------------
-# Page Setup
+# Setup
 # --------------------------------------------------
 
 st.set_page_config(
@@ -25,15 +24,7 @@ st.set_page_config(
 
 st.title("HR AI Assistant")
 
-# --------------------------------------------------
-# Databricks Client
-# --------------------------------------------------
-
 w = WorkspaceClient()
-
-# --------------------------------------------------
-# Tabs
-# --------------------------------------------------
 
 tab1, tab2 = st.tabs(
     ["Genie Assistant", "Model Assistant"]
@@ -53,10 +44,7 @@ with tab1:
         key="genie_question"
     )
 
-    if st.button(
-        "Ask Genie",
-        key="ask_genie"
-    ):
+    if st.button("Ask Genie"):
 
         if not genie_question.strip():
             st.warning("Please enter a question.")
@@ -78,7 +66,7 @@ with tab1:
             answer = None
 
             with st.spinner(
-                "Genie is processing your question..."
+                "Genie is processing..."
             ):
 
                 for _ in range(30):
@@ -90,9 +78,7 @@ with tab1:
                         f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
                     )
 
-                    status = message.get("status")
-
-                    if status == "COMPLETED":
+                    if message.get("status") == "COMPLETED":
 
                         for attachment in message.get(
                             "attachments",
@@ -101,23 +87,9 @@ with tab1:
 
                             if "text" in attachment:
 
-                                answer = (
-                                    attachment["text"]
-                                    .get("content")
-                                )
-
+                                answer = attachment["text"]["content"]
                                 break
 
-                        break
-
-                    elif status in [
-                        "FAILED",
-                        "ERROR"
-                    ]:
-
-                        st.error(
-                            "Genie request failed."
-                        )
                         break
 
             st.subheader("Question")
@@ -127,17 +99,12 @@ with tab1:
 
             if answer:
                 st.success(answer)
-
             else:
-                st.warning(
-                    "No response received from Genie."
-                )
+                st.warning("No answer returned.")
 
         except Exception as e:
 
-            st.error(
-                f"Genie error: {str(e)}"
-            )
+            st.error(f"Genie error: {e}")
 
 # ==================================================
 # TAB 2 - FOUNDATION MODEL
@@ -154,20 +121,70 @@ with tab2:
 
     if st.button("Generate Response"):
 
+        if not prompt.strip():
+            st.warning("Please enter a prompt.")
+            st.stop()
+
         try:
 
-            response = w.serving_endpoints.query(
-                name="system.ai.meta-llama-3-3-70b-instruct",
-                messages=[
+            # Use current Databricks identity
+            token = w.config.token
+
+            if not token:
+                raise Exception(
+                    "No Databricks token available for this app identity."
+                )
+
+            payload = {
+                "model": MODEL_NAME,
+                "messages": [
                     {
                         "role": "user",
                         "content": prompt
                     }
-                ]
+                ],
+                "max_tokens": 300
+            }
+
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            }
+
+            with st.spinner(
+                "Generating response..."
+            ):
+
+                response = requests.post(
+                    f"{HOST}/ai-gateway/mlflow/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=60
+                )
+
+            response.raise_for_status()
+
+            result = response.json()
+
+            answer = (
+                result["choices"][0]
+                ["message"]["content"]
             )
 
-            st.write(response)
+            st.subheader("Prompt")
+            st.write(prompt)
+
+            st.subheader("Response")
+            st.success(answer)
+
+        except requests.Timeout:
+
+            st.warning(
+                "Request timed out. Please try again."
+            )
 
         except Exception as e:
 
-            st.error(str(e))
+            st.error(
+                f"Model endpoint unavailable: {e}"
+            )
