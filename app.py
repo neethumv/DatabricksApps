@@ -20,263 +20,278 @@ SERVER_HOSTNAME = "dbc-7f6f174c-ac08.cloud.databricks.com"
 WAREHOUSE_ID = "1cfe7f2931b647ba"
 HTTP_PATH = "/sql/1.0/warehouses/1cfe7f2931b647ba"
 
-def get_user_connection():
+
+def get_user_client():
 
     user_token = st.context.headers.get(
         "X-Forwarded-Access-Token"
     )
 
-    if not user_token:
-        raise Exception(
-            "User access token not found."
+    cfg = Config(
+        host="https://dbc-7f6f174c-ac08.cloud.databricks.com",
+        token=user_token,
+        auth_type="pat"
+    )
+
+    return WorkspaceClient(config=cfg)
+
+if st.button("Show Current User"):
+
+    try:
+
+        user_client = get_user_client()
+
+        result = user_client.api_client.do(
+            "GET",
+            "/api/2.0/preview/scim/v2/Me"
         )
 
-    return sql.connect(
-        server_hostname=SERVER_HOSTNAME,
-        http_path=HTTP_PATH,
-        access_token=user_token
-    )
+        st.json(result)
+
+    except Exception as e:
+
+        st.error(str(e))
 
 # --------------------------------------------------
 # PAGE SETUP
 # --------------------------------------------------
 
-st.set_page_config(
-    page_title="HR AI Assistant",
-    layout="wide"
-)
+# st.set_page_config(
+#     page_title="HR AI Assistant",
+#     layout="wide"
+# )
 
-st.title("HR AI Assistant")
+# st.title("HR AI Assistant")
 
-w = WorkspaceClient()
-# def get_user_client():
+# w = WorkspaceClient()
+# # def get_user_client():
 
-#     headers = st.context.headers
+# #     headers = st.context.headers
 
-#     user_token = headers.get(
-#         "x-forwarded-access-token"
+# #     user_token = headers.get(
+# #         "x-forwarded-access-token"
+# #     )
+
+# #     if not user_token:
+# #         raise Exception(
+# #             "User token not found. Ensure User Authorization is enabled."
+# #         )
+
+# #     cfg = Config(
+# #         host=app_client.config.host,
+# #         token=user_token
+# #     )
+
+# #     return WorkspaceClient(config=cfg)
+
+# # if st.button("Show Current User"):
+
+# #     try:
+
+# #         user_client = get_user_client()
+
+# #         response = user_client.statement_execution.execute_statement(
+# #             warehouse_id=WAREHOUSE_ID,
+# #             statement="""
+# #             SELECT current_user() AS current_user
+# #             """,
+# #             wait_timeout="30s"
+# #         )
+
+# #         st.json(response.as_dict())
+
+# #     except Exception as e:
+
+# #         st.error(str(e))
+# # --------------------------------------------------
+# # TABS
+# # --------------------------------------------------
+
+# tab1, tab2, tab3 = st.tabs(
+#     [
+#         "Genie Assistant",
+#         "Model Assistant",
+#         "Leave Balances"
+#     ]
+# )
+
+# # ==================================================
+# # TAB 1 - GENIE ASSISTANT
+# # ==================================================
+
+# with tab1:
+
+#     st.header("HR Genie Assistant")
+
+#     genie_question = st.text_input(
+#         "Ask a question about HR data",
+#         placeholder="How many active employees do we have?"
 #     )
 
-#     if not user_token:
-#         raise Exception(
-#             "User token not found. Ensure User Authorization is enabled."
-#         )
+#     if st.button("Ask Genie"):
 
-#     cfg = Config(
-#         host=app_client.config.host,
-#         token=user_token
+#         if genie_question.strip():
+
+#             try:
+
+#                 response = w.api_client.do(
+#                     "POST",
+#                     f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
+#                     body={
+#                         "content": genie_question
+#                     }
+#                 )
+
+#                 conversation_id = response["conversation_id"]
+#                 message_id = response["message_id"]
+
+#                 answer = None
+
+#                 with st.spinner(
+#                     "Genie is processing..."
+#                 ):
+
+#                     for _ in range(30):
+
+#                         time.sleep(2)
+
+#                         message = w.api_client.do(
+#                             "GET",
+#                             f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
+#                         )
+
+#                         if message.get("status") == "COMPLETED":
+
+#                             for attachment in message.get(
+#                                 "attachments",
+#                                 []
+#                             ):
+
+#                                 if "text" in attachment:
+
+#                                     answer = attachment[
+#                                         "text"
+#                                     ].get(
+#                                         "content"
+#                                     )
+
+#                                     break
+
+#                             break
+
+#                 st.subheader("Question")
+#                 st.write(genie_question)
+
+#                 st.subheader("Answer")
+
+#                 if answer:
+#                     st.success(answer)
+
+#             except Exception as e:
+
+#                 st.error(
+#                     f"Genie error: {str(e)}"
+#                 )
+
+# # ==================================================
+# # TAB 2 - FOUNDATION MODEL
+# # ==================================================
+
+# with tab2:
+
+#     st.header("Foundation Model Assistant")
+
+#     prompt = st.text_area(
+#         "Enter a prompt",
+#         placeholder="Explain GDPR in one sentence."
 #     )
 
-#     return WorkspaceClient(config=cfg)
+#     if st.button("Generate Response"):
 
-# if st.button("Show Current User"):
+#         if prompt.strip():
 
-#     try:
+#             try:
 
-#         user_client = get_user_client()
+#                 with st.spinner(
+#                     "Generating response..."
+#                 ):
 
-#         response = user_client.statement_execution.execute_statement(
-#             warehouse_id=WAREHOUSE_ID,
-#             statement="""
-#             SELECT current_user() AS current_user
-#             """,
-#             wait_timeout="30s"
-#         )
+#                     response = w.serving_endpoints.query(
+#                         name=MODEL_NAME,
+#                         messages=[
+#                             ChatMessage(
+#                                 role="user",
+#                                 content=prompt
+#                             )
+#                         ]
+#                     )
 
-#         st.json(response.as_dict())
+#                 answer = (
+#                     response
+#                     .choices[0]
+#                     .message
+#                     .content
+#                 )
 
-#     except Exception as e:
+#                 st.subheader("Prompt")
+#                 st.write(prompt)
 
-#         st.error(str(e))
-# --------------------------------------------------
-# TABS
-# --------------------------------------------------
+#                 st.subheader("Response")
+#                 st.success(answer)
 
-tab1, tab2, tab3 = st.tabs(
-    [
-        "Genie Assistant",
-        "Model Assistant",
-        "Leave Balances"
-    ]
-)
+#             except TimeoutError:
 
-# ==================================================
-# TAB 1 - GENIE ASSISTANT
-# ==================================================
+#                 st.warning(
+#                     "Request timed out. Please try again."
+#                 )
 
-with tab1:
+#             except Exception as e:
 
-    st.header("HR Genie Assistant")
+#                 st.error(
+#                     f"Model endpoint unavailable: {str(e)}"
+#                 )
 
-    genie_question = st.text_input(
-        "Ask a question about HR data",
-        placeholder="How many active employees do we have?"
-    )
+# # ==================================================
+# # TAB 3 - ACCESS CONTROL TEST
+# # ==================================================
+# with tab3:
 
-    if st.button("Ask Genie"):
+#     st.header("Leave Balances Access Control Test")
 
-        if genie_question.strip():
+#     if st.button("Load Leave Balance Data"):
 
-            try:
+#         try:
 
-                response = w.api_client.do(
-                    "POST",
-                    f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
-                    body={
-                        "content": genie_question
-                    }
-                )
+#             st.write("Headers available:")
+#             st.write(list(st.context.headers.keys()))
 
-                conversation_id = response["conversation_id"]
-                message_id = response["message_id"]
+#             user_token = st.context.headers.get(
+#                 "X-Forwarded-Access-Token"
+#             )
 
-                answer = None
+#             st.write(
+#                 "Token exists:",
+#                 user_token is not None
+#             )
 
-                with st.spinner(
-                    "Genie is processing..."
-                ):
+#             conn = get_user_connection()
 
-                    for _ in range(30):
+#             cursor = conn.cursor()
 
-                        time.sleep(2)
+#             cursor.execute("""
+#                 SELECT current_user()
+#             """)
 
-                        message = w.api_client.do(
-                            "GET",
-                            f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
-                        )
+#             rows = cursor.fetchall()
 
-                        if message.get("status") == "COMPLETED":
+#             st.write(rows)
 
-                            for attachment in message.get(
-                                "attachments",
-                                []
-                            ):
+#             cursor.close()
+#             conn.close()
 
-                                if "text" in attachment:
+#         except Exception as e:
 
-                                    answer = attachment[
-                                        "text"
-                                    ].get(
-                                        "content"
-                                    )
+#             import traceback
 
-                                    break
-
-                            break
-
-                st.subheader("Question")
-                st.write(genie_question)
-
-                st.subheader("Answer")
-
-                if answer:
-                    st.success(answer)
-
-            except Exception as e:
-
-                st.error(
-                    f"Genie error: {str(e)}"
-                )
-
-# ==================================================
-# TAB 2 - FOUNDATION MODEL
-# ==================================================
-
-with tab2:
-
-    st.header("Foundation Model Assistant")
-
-    prompt = st.text_area(
-        "Enter a prompt",
-        placeholder="Explain GDPR in one sentence."
-    )
-
-    if st.button("Generate Response"):
-
-        if prompt.strip():
-
-            try:
-
-                with st.spinner(
-                    "Generating response..."
-                ):
-
-                    response = w.serving_endpoints.query(
-                        name=MODEL_NAME,
-                        messages=[
-                            ChatMessage(
-                                role="user",
-                                content=prompt
-                            )
-                        ]
-                    )
-
-                answer = (
-                    response
-                    .choices[0]
-                    .message
-                    .content
-                )
-
-                st.subheader("Prompt")
-                st.write(prompt)
-
-                st.subheader("Response")
-                st.success(answer)
-
-            except TimeoutError:
-
-                st.warning(
-                    "Request timed out. Please try again."
-                )
-
-            except Exception as e:
-
-                st.error(
-                    f"Model endpoint unavailable: {str(e)}"
-                )
-
-# ==================================================
-# TAB 3 - ACCESS CONTROL TEST
-# ==================================================
-with tab3:
-
-    st.header("Leave Balances Access Control Test")
-
-    if st.button("Load Leave Balance Data"):
-
-        try:
-
-            st.write("Headers available:")
-            st.write(list(st.context.headers.keys()))
-
-            user_token = st.context.headers.get(
-                "X-Forwarded-Access-Token"
-            )
-
-            st.write(
-                "Token exists:",
-                user_token is not None
-            )
-
-            conn = get_user_connection()
-
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                SELECT current_user()
-            """)
-
-            rows = cursor.fetchall()
-
-            st.write(rows)
-
-            cursor.close()
-            conn.close()
-
-        except Exception as e:
-
-            import traceback
-
-            st.error(str(e))
-            st.code(traceback.format_exc())
+#             st.error(str(e))
+#             st.code(traceback.format_exc())
