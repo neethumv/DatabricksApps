@@ -1,6 +1,8 @@
 import time
+import os
 import streamlit as st
 from databricks.sdk import WorkspaceClient
+from openai import OpenAI
 
 # --------------------------------------------------
 # Configuration
@@ -8,24 +10,30 @@ from databricks.sdk import WorkspaceClient
 
 SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
 
-MODEL_ENDPOINT = "system.ai.meta-llama-3-3-70b-instruct"
+MODEL_NAME = "system.ai.meta-llama-3-3-70b-instruct"
+
+DATABRICKS_HOST = "https://dbc-7f6f174c-ac08.cloud.databricks.com"
+
+# --------------------------------------------------
+# Page Setup
+# --------------------------------------------------
 
 st.set_page_config(
     page_title="HR AI Assistant",
     layout="wide"
 )
 
+st.title("HR AI Assistant")
+
 # --------------------------------------------------
-# Initialize Client
+# Databricks Client
 # --------------------------------------------------
 
 w = WorkspaceClient()
 
 # --------------------------------------------------
-# UI
+# Tabs
 # --------------------------------------------------
-
-st.title("HR AI Assistant")
 
 tab1, tab2 = st.tabs(
     ["Genie Assistant", "Model Assistant"]
@@ -41,8 +49,8 @@ with tab1:
 
     genie_question = st.text_input(
         "Ask a question about HR data",
-        key="genie_question",
-        placeholder="How many active employees do we have?"
+        placeholder="How many active employees do we have?",
+        key="genie_question"
     )
 
     if st.button(
@@ -92,25 +100,24 @@ with tab1:
                         ):
 
                             if "text" in attachment:
+
                                 answer = (
                                     attachment["text"]
                                     .get("content")
                                 )
+
                                 break
 
                         break
 
-                    elif status == "FAILED":
+                    elif status in [
+                        "FAILED",
+                        "ERROR"
+                    ]:
 
-                        error_msg = (
-                            message.get("error", {})
-                            .get(
-                                "error",
-                                "Genie request failed."
-                            )
+                        st.error(
+                            "Genie request failed."
                         )
-
-                        st.error(error_msg)
                         break
 
             st.subheader("Question")
@@ -129,21 +136,21 @@ with tab1:
         except Exception as e:
 
             st.error(
-                f"Genie request failed: {str(e)}"
+                f"Genie error: {str(e)}"
             )
 
 # ==================================================
-# TAB 2 - MODEL SERVING
+# TAB 2 - FOUNDATION MODEL
 # ==================================================
 
 with tab2:
 
     st.header("Foundation Model Assistant")
 
-    model_prompt = st.text_area(
+    prompt = st.text_area(
         "Enter a prompt",
-        key="model_prompt",
-        placeholder="Explain GDPR in one sentence."
+        placeholder="Explain GDPR in one sentence.",
+        key="model_prompt"
     )
 
     if st.button(
@@ -151,26 +158,40 @@ with tab2:
         key="generate_response"
     ):
 
-        if not model_prompt.strip():
+        if not prompt.strip():
             st.warning("Please enter a prompt.")
             st.stop()
 
         try:
 
+            # Uses Databricks Apps identity
+            token = os.environ.get(
+                "DATABRICKS_TOKEN"
+            )
+
+            if not token:
+                raise Exception(
+                    "DATABRICKS_TOKEN not available."
+                )
+
+            client = OpenAI(
+                api_key=token,
+                base_url=f"{DATABRICKS_HOST}/ai-gateway/v1"
+            )
+
             with st.spinner(
                 "Generating response..."
             ):
 
-                response = (
-                    w.serving_endpoints.query(
-                        name=MODEL_ENDPOINT,
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": model_prompt
-                            }
-                        ]
-                    )
+                response = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    max_tokens=300
                 )
 
             answer = (
@@ -181,7 +202,7 @@ with tab2:
             )
 
             st.subheader("Prompt")
-            st.write(model_prompt)
+            st.write(prompt)
 
             st.subheader("Response")
             st.success(answer)
@@ -189,7 +210,7 @@ with tab2:
         except TimeoutError:
 
             st.warning(
-                "The request timed out. Please try again."
+                "Request timed out. Please try again."
             )
 
         except Exception as e:
