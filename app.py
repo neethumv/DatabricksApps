@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 from databricks.sdk import WorkspaceClient
 
 st.title("HR Analytics Dashboard")
@@ -8,30 +7,8 @@ try:
 
     w = WorkspaceClient()
 
-    result = w.statement_execution.execute_statement(
-        warehouse_id="1cfe7f2931b647ba",
-        statement="""
-        SELECT
-            employee_id,
-            employee_name,
-            department,
-            region
-        FROM hr_catalog.hr_core.employees
-        LIMIT 10
-        """
-    ).result()
-
-    df = pd.DataFrame(
-        result.data_array,
-        columns=[
-            "employee_id",
-            "employee_name",
-            "department",
-            "region"
-        ]
-    )
-
-    st.dataframe(df)
+    st.success("WorkspaceClient initialized")
 
 except Exception as e:
+
     st.error(str(e))
