@@ -1,61 +1,45 @@
 import streamlit as st
+import time
 from databricks.sdk import WorkspaceClient
-
-st.set_page_config(
-    page_title="HR Genie Assistant",
-    layout="wide"
-)
 
 st.title("HR Genie Assistant")
 
-st.write(
-    "Ask a question about the HR Genie Space."
-)
-
-SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
+SPACE_ID = "YOUR_SPACE_ID"
 
 question = st.text_input(
-    "Question",
-    placeholder="How many active employees do we have?"
+    "Ask a question about HR data:"
 )
 
 if st.button("Ask"):
 
-    if not question.strip():
-        st.warning("Please enter a question.")
-    else:
+    try:
 
-        try:
+        w = WorkspaceClient()
 
-            w = WorkspaceClient()
+        # Create conversation and submit question
+        response = w.api_client.do(
+            "POST",
+            f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
+            body={
+                "content": question
+            }
+        )
 
-            # Creates a conversation and submits the question
-            response = w.api_client.do(
-                "POST",
-                f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
-                body={
-                    "content": question
-                }
-            )
+        conversation_id = response["conversation_id"]
 
-            st.success("Question submitted successfully")
+        st.write(f"Conversation ID: {conversation_id}")
 
-            st.subheader("Conversation ID")
-            st.code(response.get("conversation_id", "Not Returned"))
+        # Give Genie time to process
+        time.sleep(5)
 
-            st.subheader("Response")
+        # Get conversation details
+        conversation = w.api_client.do(
+            "GET",
+            f"/api/2.0/genie/conversations/{conversation_id}"
+        )
 
-            if "message" in response:
-                message = response["message"]
+        st.subheader("Conversation Details")
+        st.json(conversation)
 
-                st.write("Submitted Question:")
-                st.info(message.get("content", question))
-
-                st.write("Status:")
-                st.write(message.get("status", "Unknown"))
-
-            with st.expander("Raw API Response"):
-                st.json(response)
-
-        except Exception as e:
-            st.error(str(e))
+    except Exception as e:
+        st.error(str(e))
