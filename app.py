@@ -112,79 +112,10 @@ with tab1:
 
 with tab2:
 
-    st.header("Foundation Model Assistant")
+    if st.button("Debug Config"):
 
-    prompt = st.text_area(
-        "Enter a prompt",
-        placeholder="Explain GDPR in one sentence."
-    )
+        st.write("Host:")
+        st.write(w.config.host)
 
-    if st.button("Generate Response"):
-
-        if not prompt.strip():
-            st.warning("Please enter a prompt.")
-            st.stop()
-
-        try:
-
-            # Use current Databricks identity
-            token = w.config.token
-
-            if not token:
-                raise Exception(
-                    "No Databricks token available for this app identity."
-                )
-
-            payload = {
-                "model": MODEL_NAME,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "max_tokens": 300
-            }
-
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
-            }
-
-            with st.spinner(
-                "Generating response..."
-            ):
-
-                response = requests.post(
-                    f"{HOST}/ai-gateway/mlflow/v1/chat/completions",
-                    headers=headers,
-                    json=payload,
-                    timeout=60
-                )
-
-            response.raise_for_status()
-
-            result = response.json()
-
-            answer = (
-                result["choices"][0]
-                ["message"]["content"]
-            )
-
-            st.subheader("Prompt")
-            st.write(prompt)
-
-            st.subheader("Response")
-            st.success(answer)
-
-        except requests.Timeout:
-
-            st.warning(
-                "Request timed out. Please try again."
-            )
-
-        except Exception as e:
-
-            st.error(
-                f"Model endpoint unavailable: {e}"
-            )
+        st.write("Auth Type:")
+        st.write(type(w.config))
