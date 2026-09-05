@@ -217,15 +217,11 @@ with tab3:
             result = response.as_dict()
 
             st.write("Top-level keys")
-            st.write(result.keys())
+            st.write(list(result.keys()))
             
-            if "result" in result:
-                st.subheader("Result")
-                st.json(result["result"])
-            
-            if "manifest" in result:
-                st.subheader("Manifest")
-                st.json(result["manifest"])
+            for key, value in result.items():
+            st.subheader(key)
+            st.json(value)
 
         except Exception as e:
 
