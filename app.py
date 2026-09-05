@@ -213,7 +213,19 @@ with tab3:
             st.success("Query executed successfully")
 
             # st.json(response.as_dict())
-            st.json(response.as_dict()["manifest"]["schema"]["columns"])
+            # st.json(response.as_dict()["manifest"]["schema"]["columns"])
+            result = response.as_dict()
+
+            st.write("Top-level keys")
+            st.write(result.keys())
+            
+            if "result" in result:
+                st.subheader("Result")
+                st.json(result["result"])
+            
+            if "manifest" in result:
+                st.subheader("Manifest")
+                st.json(result["manifest"])
 
         except Exception as e:
 
