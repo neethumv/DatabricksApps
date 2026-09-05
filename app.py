@@ -1,5 +1,5 @@
-import streamlit as st
 import time
+import streamlit as st
 from databricks.sdk import WorkspaceClient
 
 # --------------------------------------------------
@@ -8,89 +8,192 @@ from databricks.sdk import WorkspaceClient
 
 SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
 
+MODEL_ENDPOINT = "system.ai.meta-llama-3-3-70b-instruct"
+
 st.set_page_config(
-    page_title="HR Genie Assistant",
+    page_title="HR AI Assistant",
     layout="wide"
 )
+
+# --------------------------------------------------
+# Initialize Client
+# --------------------------------------------------
+
+w = WorkspaceClient()
 
 # --------------------------------------------------
 # UI
 # --------------------------------------------------
 
-st.title("HR Genie Assistant")
+st.title("HR AI Assistant")
 
-question = st.text_input(
-    "Ask a question about HR data:",
-    placeholder="How many active employees do we have?"
+tab1, tab2 = st.tabs(
+    ["Genie Assistant", "Model Assistant"]
 )
 
-# --------------------------------------------------
-# Ask Genie
-# --------------------------------------------------
+# ==================================================
+# TAB 1 - GENIE
+# ==================================================
 
-if st.button("Ask"):
+with tab1:
 
-    if not question.strip():
-        st.warning("Please enter a question.")
-        st.stop()
+    st.header("HR Genie Assistant")
 
-    try:
+    genie_question = st.text_input(
+        "Ask a question about HR data",
+        key="genie_question",
+        placeholder="How many active employees do we have?"
+    )
 
-        w = WorkspaceClient()
+    if st.button(
+        "Ask Genie",
+        key="ask_genie"
+    ):
 
-        # Submit question to Genie
-        response = w.api_client.do(
-            "POST",
-            f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
-            body={
-                "content": question
-            }
-        )
+        if not genie_question.strip():
+            st.warning("Please enter a question.")
+            st.stop()
 
-        conversation_id = response["conversation_id"]
-        message_id = response["message_id"]
+        try:
 
-        answer = None
-
-        # Poll until Genie finishes processing
-        for _ in range(30):
-
-            time.sleep(2)
-
-            message = w.api_client.do(
-                "GET",
-                f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
+            response = w.api_client.do(
+                "POST",
+                f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
+                body={
+                    "content": genie_question
+                }
             )
 
-            status = message.get("status")
+            conversation_id = response["conversation_id"]
+            message_id = response["message_id"]
 
-            if status == "COMPLETED":
+            answer = None
 
-                for attachment in message.get("attachments", []):
+            with st.spinner(
+                "Genie is processing your question..."
+            ):
 
-                    if "text" in attachment:
-                        answer = attachment["text"]["content"]
+                for _ in range(30):
+
+                    time.sleep(2)
+
+                    message = w.api_client.do(
+                        "GET",
+                        f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
+                    )
+
+                    status = message.get("status")
+
+                    if status == "COMPLETED":
+
+                        for attachment in message.get(
+                            "attachments",
+                            []
+                        ):
+
+                            if "text" in attachment:
+                                answer = (
+                                    attachment["text"]
+                                    .get("content")
+                                )
+                                break
+
                         break
 
-                break
+                    elif status == "FAILED":
 
-            elif status in ["FAILED", "ERROR"]:
-                st.error(
-                    f"Genie request failed with status: {status}"
+                        error_msg = (
+                            message.get("error", {})
+                            .get(
+                                "error",
+                                "Genie request failed."
+                            )
+                        )
+
+                        st.error(error_msg)
+                        break
+
+            st.subheader("Question")
+            st.write(genie_question)
+
+            st.subheader("Answer")
+
+            if answer:
+                st.success(answer)
+
+            else:
+                st.warning(
+                    "No response received from Genie."
                 )
-                st.stop()
 
-        st.subheader("Question")
-        st.write(question)
+        except Exception as e:
 
-        st.subheader("Answer")
-
-        if answer:
-            st.success(answer)
-        else:
-            st.warning(
-                "Genie did not return an answer within the timeout period."
+            st.error(
+                f"Genie request failed: {str(e)}"
             )
 
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+# ==================================================
+# TAB 2 - MODEL SERVING
+# ==================================================
+
+with tab2:
+
+    st.header("Foundation Model Assistant")
+
+    model_prompt = st.text_area(
+        "Enter a prompt",
+        key="model_prompt",
+        placeholder="Explain GDPR in one sentence."
+    )
+
+    if st.button(
+        "Generate Response",
+        key="generate_response"
+    ):
+
+        if not model_prompt.strip():
+            st.warning("Please enter a prompt.")
+            st.stop()
+
+        try:
+
+            with st.spinner(
+                "Generating response..."
+            ):
+
+                response = (
+                    w.serving_endpoints.query(
+                        name=MODEL_ENDPOINT,
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": model_prompt
+                            }
+                        ]
+                    )
+                )
+
+            answer = (
+                response
+                .choices[0]
+                .message
+                .content
+            )
+
+            st.subheader("Prompt")
+            st.write(model_prompt)
+
+            st.subheader("Response")
+            st.success(answer)
+
+        except TimeoutError:
+
+            st.warning(
+                "The request timed out. Please try again."
+            )
+
+        except Exception as e:
+
+            st.error(
+                f"Model endpoint unavailable: {str(e)}"
+            )
