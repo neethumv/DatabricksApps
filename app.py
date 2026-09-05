@@ -347,7 +347,17 @@ with tab3:
             st.bar_chart(
                 df.set_index("region")["employee_count"]
             )
-
+            # --------------------------------
+            # Iteration 3 - Download CSV
+            # --------------------------------
+            csv_data = df.to_csv(
+                index=False)
+            st.download_button(
+                label="Download CSV",
+                data=csv_data,
+                file_name="leave_balance_summary.csv",
+                mime="text/csv"
+            )
         except Exception as e:
 
             st.error(
