@@ -328,10 +328,7 @@ with tab3:
                     errors="coerce"
                 )
             
-            st.success(f"Logged in as: {user_email}")
-            email = st.context.headers.get("X-Forwarded-Email")
 
-            st.success(f"Logged in as: {email}")
             st.subheader("Leave Balance Summary by Region")
             
             st.dataframe(
