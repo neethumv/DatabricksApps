@@ -202,10 +202,6 @@ with tab3:
             response = w.statement_execution.execute_statement(
                 warehouse_id=WAREHOUSE_ID,
                 statement="""
-                # SELECT
-                # region
-                # FROM hr_catalog.hr_core.leave_balances
-                # LIMIT 20
                 SELECT current_user();
                 """,
                 wait_timeout="30s"
