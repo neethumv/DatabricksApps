@@ -19,45 +19,39 @@ if st.button("Ask"):
 
     if not question.strip():
         st.warning("Please enter a question.")
-        st.stop()
+    else:
 
-    try:
+        try:
 
-        w = WorkspaceClient()
+            w = WorkspaceClient()
 
-        response = w.api_client.do(
-            "POST",
-            f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
-            body={
-                "content": question
-            }
-        )
-
-        conversation_id = response.get("conversation_id")
-
-        st.success("Question submitted to Genie")
-
-        st.subheader("Question")
-        st.write(question)
-
-        st.subheader("Conversation ID")
-        st.code(conversation_id)
-
-        if "message" in response:
-
-            st.subheader("Submission Status")
-
-            status = response["message"].get(
-                "status",
-                "Unknown"
+            response = w.api_client.do(
+                "POST",
+                f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
+                body={
+                    "content": question
+                }
             )
 
-            st.write(status)
+            st.subheader("Question")
+            st.write(question)
 
-        st.subheader("Genie Response Payload")
+            answer = "No answer returned"
 
-        st.json(response)
+            attachments = response.get("attachments", [])
 
-    except Exception as e:
+            for attachment in attachments:
 
-        st.error(str(e))
+                if "text" in attachment:
+                    answer = attachment["text"].get(
+                        "content",
+                        answer
+                    )
+                    break
+
+            st.subheader("Answer")
+            st.success(answer)
+
+        except Exception as e:
+
+            st.error(str(e))
