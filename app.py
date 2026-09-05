@@ -5,6 +5,8 @@ import streamlit as st
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.serving import ChatMessage, ChatMessageRole
 from databricks import sql
+from databricks.sdk.core import Config
+import os
 
 # --------------------------------------------------
 # CONFIGURATION
@@ -29,197 +31,235 @@ st.set_page_config(
 
 st.title("HR AI Assistant")
 
-w = WorkspaceClient()
+app_client = WorkspaceClient()
+def get_user_client():
 
+    headers = st.context.headers
+
+    user_token = headers.get(
+        "x-forwarded-access-token"
+    )
+
+    if not user_token:
+        raise Exception(
+            "User token not found. Ensure User Authorization is enabled."
+        )
+
+    cfg = Config(
+        host=app_client.config.host,
+        token=user_token
+    )
+
+    return WorkspaceClient(config=cfg)
+
+if st.button("Show Current User"):
+
+    try:
+
+        user_client = get_user_client()
+
+        response = user_client.statement_execution.execute_statement(
+            warehouse_id=WAREHOUSE_ID,
+            statement="""
+            SELECT current_user() AS current_user
+            """,
+            wait_timeout="30s"
+        )
+
+        st.json(response.as_dict())
+
+    except Exception as e:
+
+        st.error(str(e))
 # --------------------------------------------------
 # TABS
 # --------------------------------------------------
 
-tab1, tab2, tab3 = st.tabs(
-    [
-        "Genie Assistant",
-        "Model Assistant",
-        "Leave Balances"
-    ]
-)
+# tab1, tab2, tab3 = st.tabs(
+#     [
+#         "Genie Assistant",
+#         "Model Assistant",
+#         "Leave Balances"
+#     ]
+# )
 
-# ==================================================
-# TAB 1 - GENIE ASSISTANT
-# ==================================================
+# # ==================================================
+# # TAB 1 - GENIE ASSISTANT
+# # ==================================================
 
-with tab1:
+# with tab1:
 
-    st.header("HR Genie Assistant")
+#     st.header("HR Genie Assistant")
 
-    genie_question = st.text_input(
-        "Ask a question about HR data",
-        placeholder="How many active employees do we have?"
-    )
+#     genie_question = st.text_input(
+#         "Ask a question about HR data",
+#         placeholder="How many active employees do we have?"
+#     )
 
-    if st.button("Ask Genie"):
+#     if st.button("Ask Genie"):
 
-        if genie_question.strip():
+#         if genie_question.strip():
 
-            try:
+#             try:
 
-                response = w.api_client.do(
-                    "POST",
-                    f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
-                    body={
-                        "content": genie_question
-                    }
-                )
+#                 response = w.api_client.do(
+#                     "POST",
+#                     f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
+#                     body={
+#                         "content": genie_question
+#                     }
+#                 )
 
-                conversation_id = response["conversation_id"]
-                message_id = response["message_id"]
+#                 conversation_id = response["conversation_id"]
+#                 message_id = response["message_id"]
 
-                answer = None
+#                 answer = None
 
-                with st.spinner(
-                    "Genie is processing..."
-                ):
+#                 with st.spinner(
+#                     "Genie is processing..."
+#                 ):
 
-                    for _ in range(30):
+#                     for _ in range(30):
 
-                        time.sleep(2)
+#                         time.sleep(2)
 
-                        message = w.api_client.do(
-                            "GET",
-                            f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
-                        )
+#                         message = w.api_client.do(
+#                             "GET",
+#                             f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
+#                         )
 
-                        if message.get("status") == "COMPLETED":
+#                         if message.get("status") == "COMPLETED":
 
-                            for attachment in message.get(
-                                "attachments",
-                                []
-                            ):
+#                             for attachment in message.get(
+#                                 "attachments",
+#                                 []
+#                             ):
 
-                                if "text" in attachment:
+#                                 if "text" in attachment:
 
-                                    answer = attachment[
-                                        "text"
-                                    ].get(
-                                        "content"
-                                    )
+#                                     answer = attachment[
+#                                         "text"
+#                                     ].get(
+#                                         "content"
+#                                     )
 
-                                    break
+#                                     break
 
-                            break
+#                             break
 
-                st.subheader("Question")
-                st.write(genie_question)
+#                 st.subheader("Question")
+#                 st.write(genie_question)
 
-                st.subheader("Answer")
+#                 st.subheader("Answer")
 
-                if answer:
-                    st.success(answer)
+#                 if answer:
+#                     st.success(answer)
 
-            except Exception as e:
+#             except Exception as e:
 
-                st.error(
-                    f"Genie error: {str(e)}"
-                )
+#                 st.error(
+#                     f"Genie error: {str(e)}"
+#                 )
 
-# ==================================================
-# TAB 2 - FOUNDATION MODEL
-# ==================================================
+# # ==================================================
+# # TAB 2 - FOUNDATION MODEL
+# # ==================================================
 
-with tab2:
+# with tab2:
 
-    st.header("Foundation Model Assistant")
+#     st.header("Foundation Model Assistant")
 
-    prompt = st.text_area(
-        "Enter a prompt",
-        placeholder="Explain GDPR in one sentence."
-    )
+#     prompt = st.text_area(
+#         "Enter a prompt",
+#         placeholder="Explain GDPR in one sentence."
+#     )
 
-    if st.button("Generate Response"):
+#     if st.button("Generate Response"):
 
-        if prompt.strip():
+#         if prompt.strip():
 
-            try:
+#             try:
 
-                with st.spinner(
-                    "Generating response..."
-                ):
+#                 with st.spinner(
+#                     "Generating response..."
+#                 ):
 
-                    response = w.serving_endpoints.query(
-                        name=MODEL_NAME,
-                        messages=[
-                            ChatMessage(
-                                role="user",
-                                content=prompt
-                            )
-                        ]
-                    )
+#                     response = w.serving_endpoints.query(
+#                         name=MODEL_NAME,
+#                         messages=[
+#                             ChatMessage(
+#                                 role="user",
+#                                 content=prompt
+#                             )
+#                         ]
+#                     )
 
-                answer = (
-                    response
-                    .choices[0]
-                    .message
-                    .content
-                )
+#                 answer = (
+#                     response
+#                     .choices[0]
+#                     .message
+#                     .content
+#                 )
 
-                st.subheader("Prompt")
-                st.write(prompt)
+#                 st.subheader("Prompt")
+#                 st.write(prompt)
 
-                st.subheader("Response")
-                st.success(answer)
+#                 st.subheader("Response")
+#                 st.success(answer)
 
-            except TimeoutError:
+#             except TimeoutError:
 
-                st.warning(
-                    "Request timed out. Please try again."
-                )
+#                 st.warning(
+#                     "Request timed out. Please try again."
+#                 )
 
-            except Exception as e:
+#             except Exception as e:
 
-                st.error(
-                    f"Model endpoint unavailable: {str(e)}"
-                )
+#                 st.error(
+#                     f"Model endpoint unavailable: {str(e)}"
+#                 )
 
-# ==================================================
-# TAB 3 - ACCESS CONTROL TEST
-# ==================================================
+# # ==================================================
+# # TAB 3 - ACCESS CONTROL TEST
+# # ==================================================
 
-with tab3:
+# with tab3:
 
-    st.header("Leave Balances Access Control Test")
+#     st.header("Leave Balances Access Control Test")
 
-    st.write("""
-    This demonstrates Unity Catalog row-level security.
+#     st.write("""
+#     This demonstrates Unity Catalog row-level security.
 
-    The same query is executed for every user.
-    Any differences in results come from Unity Catalog permissions,
-    not application logic.
-    """)
+#     The same query is executed for every user.
+#     Any differences in results come from Unity Catalog permissions,
+#     not application logic.
+#     """)
 
-    if st.button("Load Leave Balance Data"):
+#     if st.button("Load Leave Balance Data"):
 
-        try:
+#         try:
 
-            response = w.statement_execution.execute_statement(
-                warehouse_id=WAREHOUSE_ID,
-                statement="""
-                SELECT current_user();
-                """,
-                wait_timeout="30s"
-            )
+#             response = w.statement_execution.execute_statement(
+#                 warehouse_id=WAREHOUSE_ID,
+#                 statement="""
+#                 SELECT current_user();
+#                 """,
+#                 wait_timeout="30s"
+#             )
 
-            st.success("Query executed successfully")
+#             st.success("Query executed successfully")
 
-            # st.json(response.as_dict())
-            # st.json(response.as_dict()["manifest"]["schema"]["columns"])
-            result = response.as_dict()
+#             # st.json(response.as_dict())
+#             # st.json(response.as_dict()["manifest"]["schema"]["columns"])
+#             result = response.as_dict()
 
-            st.write("Top-level keys")
-            st.write(list(result.keys()))
+#             st.write("Top-level keys")
+#             st.write(list(result.keys()))
             
-            for key, value in result.items():
-                st.subheader(key)
-                st.json(value)
+#             for key, value in result.items():
+#                 st.subheader(key)
+#                 st.json(value)
 
-        except Exception as e:
+#         except Exception as e:
 
-            st.error(str(e))
+#             st.error(str(e))
