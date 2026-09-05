@@ -246,20 +246,10 @@ with tab2:
 # ==================================================
 # ITERATION 1 - REGION FILTER
 # ==================================================
-
 with tab3:
 
     st.header("Leave Balances Access Control Test")
 
-    st.write("""
-    This tab demonstrates Unity Catalog row-level security.
-
-    The same SQL query is executed for every user.
-    Any differences in results come from Unity Catalog
-    permissions and row filters, not application logic.
-    """)
-
-    # New Feature #1
     selected_region = st.selectbox(
         "Filter Region",
         ["All", "UK", "US", "PL"]
@@ -294,7 +284,6 @@ with tab3:
                 f"Logged in as: {user_email}"
             )
 
-            # Base query
             query = """
             SELECT
                 region,
@@ -302,7 +291,6 @@ with tab3:
             FROM hr_catalog.hr_core.leave_balances
             """
 
-            # Apply filter if selected
             if selected_region != "All":
 
                 query += f"""
@@ -336,6 +324,11 @@ with tab3:
                 columns=columns
             )
 
+            df["employee_count"] = pd.to_numeric(
+                df["employee_count"],
+                errors="coerce"
+            )
+
             st.subheader(
                 "Leave Balance Summary by Region"
             )
@@ -346,11 +339,124 @@ with tab3:
                 hide_index=True
             )
 
+            # New Feature #2
+            st.subheader(
+                "Employees by Region"
+            )
+
+            st.bar_chart(
+                df.set_index("region")["employee_count"]
+            )
+
         except Exception as e:
 
             st.error(
                 f"Query failed: {str(e)}"
             )
+# with tab3:
+
+#     st.header("Leave Balances Access Control Test")
+
+#     st.write("""
+#     This tab demonstrates Unity Catalog row-level security.
+
+#     The same SQL query is executed for every user.
+#     Any differences in results come from Unity Catalog
+#     permissions and row filters, not application logic.
+#     """)
+
+#     # New Feature #1
+#     selected_region = st.selectbox(
+#         "Filter Region",
+#         ["All", "UK", "US", "PL"]
+#     )
+
+#     if st.button("Load Leave Balance Data"):
+
+#         try:
+
+#             user_token = st.context.headers.get(
+#                 "X-Forwarded-Access-Token"
+#             )
+
+#             from databricks.sdk.core import Config
+
+#             user_client = WorkspaceClient(
+#                 config=Config(
+#                     host=w.config.host,
+#                     token=user_token,
+#                     auth_type="pat"
+#                 )
+#             )
+
+#             me = user_client.api_client.do(
+#                 "GET",
+#                 "/api/2.0/preview/scim/v2/Me"
+#             )
+
+#             user_email = me["emails"][0]["value"]
+
+#             st.success(
+#                 f"Logged in as: {user_email}"
+#             )
+
+#             # Base query
+#             query = """
+#             SELECT
+#                 region,
+#                 COUNT(*) AS employee_count
+#             FROM hr_catalog.hr_core.leave_balances
+#             """
+
+#             # Apply filter if selected
+#             if selected_region != "All":
+
+#                 query += f"""
+#                 WHERE region = '{selected_region}'
+#                 """
+
+#             query += """
+#             GROUP BY region
+#             ORDER BY region
+#             """
+
+#             response = (
+#                 user_client.statement_execution.execute_statement(
+#                     warehouse_id=WAREHOUSE_ID,
+#                     statement=query,
+#                     wait_timeout="30s"
+#                 )
+#             )
+
+#             result_dict = response.as_dict()
+
+#             columns = [
+#                 col["name"]
+#                 for col in result_dict["manifest"]["schema"]["columns"]
+#             ]
+
+#             rows = result_dict["result"]["data_array"]
+
+#             df = pd.DataFrame(
+#                 rows,
+#                 columns=columns
+#             )
+
+#             st.subheader(
+#                 "Leave Balance Summary by Region"
+#             )
+
+#             st.dataframe(
+#                 df,
+#                 use_container_width=True,
+#                 hide_index=True
+#             )
+
+#         except Exception as e:
+
+#             st.error(
+#                 f"Query failed: {str(e)}"
+#             )
 # with tab3:
 
 #     st.header("Leave Balances Access Control Test")
