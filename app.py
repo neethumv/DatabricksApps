@@ -1,36 +1,26 @@
 import streamlit as st
-import pandas as pd
-from databricks import sql
-import os
+from databricks.sdk import WorkspaceClient
 
-st.title("HR Analytics Dashboard")
+st.title("Employee Table Test")
 
 try:
 
-    conn = sql.connect(
-        server_hostname="dbc-7f6f174c-ac08.cloud.databricks.com",
-        http_path="/sql/1.0/warehouses/1cfe7f2931b647ba",
-        access_token=os.environ["DATABRICKS_TOKEN"]
+    w = WorkspaceClient()
+
+    result = w.statement_execution.execute_statement(
+        warehouse_id="<YOUR_WAREHOUSE_ID>",
+        statement="""
+        SELECT COUNT(*)
+        FROM hr_catalog.hr_core.employees
+        """
+    ).result()
+
+    count = result.data_array[0][0]
+
+    st.success(
+        f"Employee Count: {count}"
     )
 
-    query = """
-    SELECT *
-    FROM hr_catalog.hr_core.employees
-    LIMIT 10
-    """
-
-    cursor = conn.cursor()
-    cursor.execute(query)
-
-    rows = cursor.fetchall()
-
-    columns = [col[0] for col in cursor.description]
-
-    df = pd.DataFrame(rows, columns=columns)
-
-    st.subheader("Employee Data")
-
-    st.dataframe(df)
-
 except Exception as e:
-    st.error(f"Error executing query: {e}")
+
+    st.error(str(e))
