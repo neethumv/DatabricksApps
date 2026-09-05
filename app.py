@@ -185,67 +185,37 @@ with tab2:
 
 with tab3:
 
-    st.header(
-        "Leave Balances Access Control Test"
-    )
+    st.header("Leave Balances Access Control Test")
 
-    st.write(
-        """
-        This tab demonstrates Unity Catalog
-        row-level security.
+    st.write("""
+    This demonstrates Unity Catalog row-level security.
 
-        The SQL query is identical for every user.
+    The same query is executed for every user.
+    Any differences in results come from Unity Catalog permissions,
+    not application logic.
+    """)
 
-        Any differences in results are caused
-        entirely by Unity Catalog permissions.
-        """
-    )
-
-    if st.button(
-        "Load Leave Balance Data"
-    ):
+    if st.button("Load Leave Balance Data"):
 
         try:
 
-            # Uses Databricks App identity
-            conn = sql.connect(
-                server_hostname=SERVER_HOSTNAME,
-                http_path=HTTP_PATH
-            )
-
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            response = w.statement_execution.execute_statement(
+                warehouse_id=WAREHOUSE_ID,
+                statement="""
                 SELECT
-                    employee_id,
-                    region,
-                    balance_days
+                region,
+                COUNT(*) AS employee_count
                 FROM hr_catalog.hr_core.leave_balances
-                LIMIT 50
-            """)
-
-            rows = cursor.fetchall()
-
-            columns = [
-                col[0]
-                for col in cursor.description
-            ]
-
-            df = pd.DataFrame(
-                rows,
-                columns=columns
+                GROUP BY region
+                ORDER BY region
+                """,
+                wait_timeout="30s"
             )
 
-            st.dataframe(
-                df,
-                use_container_width=True
-            )
+            st.success("Query executed successfully")
 
-            cursor.close()
-            conn.close()
+            st.json(response.as_dict())
 
         except Exception as e:
 
-            st.error(
-                f"Unable to load leave balance data: {str(e)}"
-            )
+            st.error(str(e))
