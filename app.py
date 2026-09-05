@@ -1,4 +1,5 @@
 import time
+import pandas as pd
 import streamlit as st
 
 from databricks.sdk import WorkspaceClient
@@ -11,6 +12,8 @@ from databricks.sdk.service.serving import ChatMessage, ChatMessageRole
 SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
 
 MODEL_NAME = "databricks-meta-llama-3-3-70b-instruct"
+
+WAREHOUSE_ID = "1cfe7f2931b647ba"
 
 # --------------------------------------------------
 # Page Setup
@@ -33,8 +36,12 @@ w = WorkspaceClient()
 # Tabs
 # --------------------------------------------------
 
-tab1, tab2 = st.tabs(
-    ["Genie Assistant", "Model Assistant"]
+tab1, tab2, tab3 = st.tabs(
+    [
+        "Genie Assistant",
+        "Model Assistant",
+        "Leave Balances"
+    ]
 )
 
 # ==================================================
@@ -102,101 +109,4 @@ with tab1:
                                 answer = (
                                     attachment["text"]
                                     .get("content")
-                                )
-
-                                break
-
-                        break
-
-                    elif status in [
-                        "FAILED",
-                        "ERROR"
-                    ]:
-
-                        st.error(
-                            "Genie request failed."
-                        )
-                        break
-
-            st.subheader("Question")
-            st.write(genie_question)
-
-            st.subheader("Answer")
-
-            if answer:
-                st.success(answer)
-
-            else:
-                st.warning(
-                    "No answer returned from Genie."
-                )
-
-        except Exception as e:
-
-            st.error(
-                f"Genie error: {str(e)}"
-            )
-
-# ==================================================
-# TAB 2 - FOUNDATION MODEL ASSISTANT
-# ==================================================
-
-with tab2:
-
-    st.header("Foundation Model Assistant")
-
-    prompt = st.text_area(
-        "Enter a prompt",
-        placeholder="Explain GDPR in one sentence.",
-        key="model_prompt"
-    )
-
-    if st.button(
-        "Generate Response",
-        key="generate_response"
-    ):
-
-        if not prompt.strip():
-            st.warning("Please enter a prompt.")
-            st.stop()
-
-        try:
-
-            with st.spinner(
-                "Generating response..."
-            ):
-
-                response = w.serving_endpoints.query(
-                    name=MODEL_NAME,
-                    messages=[
-                        ChatMessage(
-                            role=ChatMessageRole.USER,
-                            content=prompt
-                        )
-                    ]
-                )
-
-            answer = (
-                response
-                .choices[0]
-                .message
-                .content
-            )
-
-            st.subheader("Prompt")
-            st.write(prompt)
-
-            st.subheader("Response")
-            st.success(answer)
-
-        except TimeoutError:
-
-            st.warning(
-                "Request timed out. Please try again."
-            )
-
-        except Exception as e:
-
-            st.error(
-                f"Model endpoint unavailable: {str(e)}"
-            )
+                       
