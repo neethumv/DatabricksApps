@@ -1,6 +1,8 @@
 import streamlit as st
 from databricks.sdk import WorkspaceClient
 
+st.set_page_config(page_title="HR Genie Assistant")
+
 st.title("HR Genie Assistant")
 
 question = st.text_input(
@@ -9,33 +11,43 @@ question = st.text_input(
 
 if st.button("Ask"):
 
-    try:
+    if not question.strip():
+        st.warning("Please enter a question.")
+    else:
 
-        w = WorkspaceClient()
+        try:
+            w = WorkspaceClient()
 
-        SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
+            # Replace with your Genie Space ID
+            SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
 
-        # Start conversation
-        conv = w.api_client.do(
-            "POST",
-            f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation"
-        )
+            # Create conversation
+            conversation = w.api_client.do(
+                "POST",
+                f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation"
+            )
 
-        conversation_id = conv["conversation_id"]
+            st.write("Conversation Response:")
+            st.json(conversation)
 
-        # Send question
-        response = w.api_client.do(
-            "POST",
-            f"/api/2.0/genie/conversations/{conversation_id}/messages",
-            body={
-                "message": question
+            conversation_id = (
+                conversation.get("conversation_id")
+                or conversation.get("id")
+            )
+
+            # Submit question
+            payload = {
+                "content": question
             }
-        )
 
-        st.subheader("Answer")
+            response = w.api_client.do(
+                "POST",
+                f"/api/2.0/genie/conversations/{conversation_id}/messages",
+                body=payload
+            )
 
-        st.write(response)
+            st.subheader("Genie Response")
+            st.json(response)
 
-    except Exception as e:
-
-        st.error(str(e))
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
