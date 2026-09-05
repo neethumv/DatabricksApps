@@ -243,6 +243,10 @@ with tab2:
 # ACCESS CONTROL TEST
 # ==================================================
 
+# ==================================================
+# ITERATION 1 - REGION FILTER
+# ==================================================
+
 with tab3:
 
     st.header("Leave Balances Access Control Test")
@@ -255,11 +259,16 @@ with tab3:
     permissions and row filters, not application logic.
     """)
 
+    # New Feature #1
+    selected_region = st.selectbox(
+        "Filter Region",
+        ["All", "UK", "US", "PL"]
+    )
+
     if st.button("Load Leave Balance Data"):
 
         try:
 
-            # Build a user-authorized client
             user_token = st.context.headers.get(
                 "X-Forwarded-Access-Token"
             )
@@ -274,7 +283,6 @@ with tab3:
                 )
             )
 
-            # Show the logged-in user
             me = user_client.api_client.do(
                 "GET",
                 "/api/2.0/preview/scim/v2/Me"
@@ -286,51 +294,52 @@ with tab3:
                 f"Logged in as: {user_email}"
             )
 
-            # Run query as the USER
+            # Base query
+            query = """
+            SELECT
+                region,
+                COUNT(*) AS employee_count
+            FROM hr_catalog.hr_core.leave_balances
+            """
+
+            # Apply filter if selected
+            if selected_region != "All":
+
+                query += f"""
+                WHERE region = '{selected_region}'
+                """
+
+            query += """
+            GROUP BY region
+            ORDER BY region
+            """
+
             response = (
                 user_client.statement_execution.execute_statement(
                     warehouse_id=WAREHOUSE_ID,
-                    statement="""
-                    SELECT
-                        region,
-                        COUNT(*) AS employee_count
-                    FROM hr_catalog.hr_core.leave_balances
-                    GROUP BY region
-                    ORDER BY region
-                    """,
+                    statement=query,
                     wait_timeout="30s"
                 )
             )
 
-            # st.subheader("Query Response")
-
-            # st.json(response.as_dict())
-
-
             result_dict = response.as_dict()
-            
-            # Extract column names
+
             columns = [
                 col["name"]
                 for col in result_dict["manifest"]["schema"]["columns"]
             ]
-            
-            # Extract rows
-            rows = result_dict["result"]["data_array"]
-            
-            # Build dataframe
-            df = pd.DataFrame(rows, columns=columns)
-            
-            # Convert numeric columns
-            if "employee_count" in df.columns:
-                df["employee_count"] = pd.to_numeric(
-                    df["employee_count"],
-                    errors="coerce"
-                )
-            
 
-            st.subheader("Leave Balance Summary by Region")
-            
+            rows = result_dict["result"]["data_array"]
+
+            df = pd.DataFrame(
+                rows,
+                columns=columns
+            )
+
+            st.subheader(
+                "Leave Balance Summary by Region"
+            )
+
             st.dataframe(
                 df,
                 use_container_width=True,
@@ -342,3 +351,102 @@ with tab3:
             st.error(
                 f"Query failed: {str(e)}"
             )
+# with tab3:
+
+#     st.header("Leave Balances Access Control Test")
+
+#     st.write("""
+#     This tab demonstrates Unity Catalog row-level security.
+
+#     The same SQL query is executed for every user.
+#     Any differences in results come from Unity Catalog
+#     permissions and row filters, not application logic.
+#     """)
+
+#     if st.button("Load Leave Balance Data"):
+
+#         try:
+
+#             # Build a user-authorized client
+#             user_token = st.context.headers.get(
+#                 "X-Forwarded-Access-Token"
+#             )
+
+#             from databricks.sdk.core import Config
+
+#             user_client = WorkspaceClient(
+#                 config=Config(
+#                     host=w.config.host,
+#                     token=user_token,
+#                     auth_type="pat"
+#                 )
+#             )
+
+#             # Show the logged-in user
+#             me = user_client.api_client.do(
+#                 "GET",
+#                 "/api/2.0/preview/scim/v2/Me"
+#             )
+
+#             user_email = me["emails"][0]["value"]
+
+#             st.success(
+#                 f"Logged in as: {user_email}"
+#             )
+
+#             # Run query as the USER
+#             response = (
+#                 user_client.statement_execution.execute_statement(
+#                     warehouse_id=WAREHOUSE_ID,
+#                     statement="""
+#                     SELECT
+#                         region,
+#                         COUNT(*) AS employee_count
+#                     FROM hr_catalog.hr_core.leave_balances
+#                     GROUP BY region
+#                     ORDER BY region
+#                     """,
+#                     wait_timeout="30s"
+#                 )
+#             )
+
+#             # st.subheader("Query Response")
+
+#             # st.json(response.as_dict())
+
+
+#             result_dict = response.as_dict()
+            
+#             # Extract column names
+#             columns = [
+#                 col["name"]
+#                 for col in result_dict["manifest"]["schema"]["columns"]
+#             ]
+            
+#             # Extract rows
+#             rows = result_dict["result"]["data_array"]
+            
+#             # Build dataframe
+#             df = pd.DataFrame(rows, columns=columns)
+            
+#             # Convert numeric columns
+#             if "employee_count" in df.columns:
+#                 df["employee_count"] = pd.to_numeric(
+#                     df["employee_count"],
+#                     errors="coerce"
+#                 )
+            
+
+#             st.subheader("Leave Balance Summary by Region")
+            
+#             st.dataframe(
+#                 df,
+#                 use_container_width=True,
+#                 hide_index=True
+#             )
+
+#         except Exception as e:
+
+#             st.error(
+#                 f"Query failed: {str(e)}"
+#             )
