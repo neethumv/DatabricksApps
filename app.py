@@ -10,13 +10,13 @@ try:
 
     st.success("WorkspaceClient initialized")
 
-    response = w.statement_execution.execute_statement(
+    statement = w.statement_execution.execute_statement(
         warehouse_id="1cfe7f2931b647ba",
-        statement="SELECT 1"
+        statement="SELECT COUNT(*) FROM hr_catalog.hr_core.employees"
     )
 
-    st.write("Response:")
-    st.write(response)
+    st.write("Statement object:")
+    st.write(statement)
 
 except Exception as e:
 
