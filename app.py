@@ -227,11 +227,11 @@ with tab3:
                                 warehouse_id=WAREHOUSE_ID,
                                 statement="""
                                 SELECT
-                                    employee_id,
                                     region,
-                                    leave_balance
+                                    COUNT(*) AS employee_count
                                 FROM hr_catalog.hr_core.leave_balances
-                                LIMIT 20
+                                GROUP BY region
+                                ORDER BY region
                                 """,
                                 wait_timeout="30s"
                             )
