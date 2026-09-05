@@ -36,7 +36,7 @@ def get_user_connection():
         http_path=HTTP_PATH,
         access_token=user_token
     )
-``
+
 # --------------------------------------------------
 # PAGE SETUP
 # --------------------------------------------------
