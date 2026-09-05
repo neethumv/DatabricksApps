@@ -1,57 +1,75 @@
 import streamlit as st
+import time
 from databricks.sdk import WorkspaceClient
-
-st.set_page_config(
-    page_title="HR Genie Assistant",
-    layout="wide"
-)
 
 SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
 
 st.title("HR Genie Assistant")
 
 question = st.text_input(
-    "Ask a question about HR data:",
-    placeholder="How many active employees do we have?"
+    "Ask a question about HR data:"
 )
 
 if st.button("Ask"):
 
-    if not question.strip():
-        st.warning("Please enter a question.")
-    else:
+    try:
 
-        try:
+        w = WorkspaceClient()
 
-            w = WorkspaceClient()
+        response = w.api_client.do(
+            "POST",
+            f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
+            body={
+                "content": question
+            }
+        )
 
-            response = w.api_client.do(
-                "POST",
-                f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
-                body={
-                    "content": question
-                }
-            )
+        conversation_id = response["conversation_id"]
+        message_id = response["message_id"]
 
-            st.subheader("Question")
-            st.write(question)
+        st.write("Waiting for Genie response...")
 
-            answer = "No answer returned"
+        answer = None
 
-            attachments = response.get("attachments", [])
+        # Poll for completion
+        for _ in range(15):
 
-            for attachment in attachments:
+            time.sleep(2)
 
-                if "text" in attachment:
-                    answer = attachment["text"].get(
-                        "content",
-                        answer
-                    )
+            try:
+
+                msg = w.api_client.do(
+                    "GET",
+                    f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
+                )
+
+                if "attachments" in msg:
+
+                    for attachment in msg["attachments"]:
+
+                        if "text" in attachment:
+
+                            answer = attachment["text"]["content"]
+                            break
+
+                if answer:
                     break
 
-            st.subheader("Raw Response")
-            st.json(response)
+            except Exception:
+                pass
 
-        except Exception as e:
+        st.subheader("Question")
+        st.write(question)
 
-            st.error(str(e))
+        st.subheader("Answer")
+
+        if answer:
+            st.success(answer)
+        else:
+            st.warning(
+                "Genie response not yet available."
+            )
+
+    except Exception as e:
+
+        st.error(str(e))
