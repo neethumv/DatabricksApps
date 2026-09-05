@@ -4,7 +4,7 @@ from databricks.sdk import WorkspaceClient
 
 st.title("HR Genie Assistant")
 
-SPACE_ID = "YOUR_SPACE_ID"
+SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
 
 question = st.text_input(
     "Ask a question about HR data:"
