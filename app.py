@@ -15,7 +15,7 @@ SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
 MODEL_NAME = "databricks-meta-llama-3-3-70b-instruct"
 
 SERVER_HOSTNAME = "dbc-7f6f174c-ac08.cloud.databricks.com"
-
+WAREHOUSE_ID = "1cfe7f2931b647ba"
 HTTP_PATH = "/sql/1.0/warehouses/1cfe7f2931b647ba"
 
 # --------------------------------------------------
