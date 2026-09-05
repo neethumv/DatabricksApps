@@ -4,14 +4,19 @@ import streamlit as st
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.serving import ChatMessage, ChatMessageRole
+from databricks import sql
 
 # --------------------------------------------------
 # CONFIGURATION
 # --------------------------------------------------
 
 SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
+
 MODEL_NAME = "databricks-meta-llama-3-3-70b-instruct"
-WAREHOUSE_ID = "1cfe7f2931b647ba"
+
+SERVER_HOSTNAME = "dbc-7f6f174c-ac08.cloud.databricks.com"
+
+HTTP_PATH = "/sql/1.0/warehouses/1cfe7f2931b647ba"
 
 # --------------------------------------------------
 # PAGE SETUP
@@ -39,7 +44,7 @@ tab1, tab2, tab3 = st.tabs(
 )
 
 # ==================================================
-# GENIE TAB
+# TAB 1 - GENIE ASSISTANT
 # ==================================================
 
 with tab1:
@@ -53,9 +58,7 @@ with tab1:
 
     if st.button("Ask Genie"):
 
-        if not genie_question.strip():
-            st.warning("Please enter a question.")
-        else:
+        if genie_question.strip():
 
             try:
 
@@ -73,7 +76,7 @@ with tab1:
                 answer = None
 
                 with st.spinner(
-                    "Genie is processing your question..."
+                    "Genie is processing..."
                 ):
 
                     for _ in range(30):
@@ -85,38 +88,23 @@ with tab1:
                             f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
                         )
 
-                        status = message.get("status")
+                        if message.get("status") == "COMPLETED":
 
-                        if status == "COMPLETED":
-
-                            attachments = message.get(
+                            for attachment in message.get(
                                 "attachments",
                                 []
-                            )
-
-                            for attachment in attachments:
+                            ):
 
                                 if "text" in attachment:
 
                                     answer = attachment[
                                         "text"
                                     ].get(
-                                        "content",
-                                        ""
+                                        "content"
                                     )
 
                                     break
 
-                            break
-
-                        elif status in (
-                            "FAILED",
-                            "ERROR"
-                        ):
-
-                            st.error(
-                                "Genie request failed."
-                            )
                             break
 
                 st.subheader("Question")
@@ -126,10 +114,6 @@ with tab1:
 
                 if answer:
                     st.success(answer)
-                else:
-                    st.warning(
-                        "No answer returned from Genie."
-                    )
 
             except Exception as e:
 
@@ -138,7 +122,7 @@ with tab1:
                 )
 
 # ==================================================
-# MODEL ASSISTANT TAB
+# TAB 2 - FOUNDATION MODEL
 # ==================================================
 
 with tab2:
@@ -152,9 +136,7 @@ with tab2:
 
     if st.button("Generate Response"):
 
-        if not prompt.strip():
-            st.warning("Please enter a prompt.")
-        else:
+        if prompt.strip():
 
             try:
 
@@ -198,59 +180,69 @@ with tab2:
                 )
 
 # ==================================================
-# ACCESS CONTROL TAB
+# TAB 3 - ACCESS CONTROL TEST
 # ==================================================
 
 with tab3:
 
-    st.header("Leave Balances by Region")
+    st.header(
+        "Leave Balances Access Control Test"
+    )
 
     st.write(
         """
         This tab demonstrates Unity Catalog
-        row-level security. The same SQL query is
-        executed for all users. Any differences in
-        results come from Unity Catalog permissions,
-        not application logic.
+        row-level security.
+
+        The SQL query is identical for every user.
+
+        Any differences in results are caused
+        entirely by Unity Catalog permissions.
         """
     )
 
-    if st.button("Load Leave Balance Summary"):
+    if st.button(
+        "Load Leave Balance Data"
+    ):
 
         try:
 
-            with st.spinner(
-                "Loading leave balance data..."
-            ):
+            # Uses Databricks App identity
+            conn = sql.connect(
+                server_hostname=SERVER_HOSTNAME,
+                http_path=HTTP_PATH
+            )
 
-                response = w.statement_execution.execute_statement(
-                                warehouse_id=WAREHOUSE_ID,
-                                statement="""
-                                SELECT
-                                    region,
-                                    COUNT(*) AS employee_count
-                                FROM hr_catalog.hr_core.leave_balances
-                                GROUP BY region
-                                ORDER BY region
-                                """,
-                                wait_timeout="30s"
-                            )
-                st.write(response)
+            cursor = conn.cursor()
 
-            # rows = response.result.data_array
+            cursor.execute("""
+                SELECT
+                    employee_id,
+                    region,
+                    balance_days
+                FROM hr_catalog.hr_core.leave_balances
+                LIMIT 50
+            """)
 
-            # df = pd.DataFrame(
-            #     rows,
-            #     columns=[
-            #         "Region",
-            #         "Employee Count"
-            #     ]
-            # )
+            rows = cursor.fetchall()
 
-            # st.dataframe(
-            #     df,
-            #     use_container_width=True
-            # )
+            columns = [
+                col[0]
+                for col in cursor.description
+            ]
+
+            df = pd.DataFrame(
+                rows,
+                columns=columns
+            )
+
+            st.dataframe(
+                df,
+                use_container_width=True
+            )
+
+            cursor.close()
+            conn.close()
 
         except Exception as e:
 
