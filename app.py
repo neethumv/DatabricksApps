@@ -109,4 +109,4 @@ with tab1:
                                 answer = (
                                     attachment["text"]
                                     .get("content")
-                       
+                                )
