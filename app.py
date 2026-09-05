@@ -3,14 +3,14 @@ import pandas as pd
 import streamlit as st
 
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.serving import ChatMessage
+from databricks.sdk.service.serving import ChatMessage, ChatMessageRole
 
 # --------------------------------------------------
 # CONFIGURATION
 # --------------------------------------------------
 
 SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
-MODEL_NAME = "system.ai.llama_v3_3_70b_instruct"
+MODEL_NAME = "databricks-meta-llama-3-3-70b-instruct"
 WAREHOUSE_ID = "1cfe7f2931b647ba"
 
 # --------------------------------------------------
