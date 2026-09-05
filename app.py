@@ -247,71 +247,36 @@ with tab3:
 
         try:
 
+            st.write("Headers available:")
+            st.write(list(st.context.headers.keys()))
+
+            user_token = st.context.headers.get(
+                "X-Forwarded-Access-Token"
+            )
+
+            st.write(
+                "Token exists:",
+                user_token is not None
+            )
+
             conn = get_user_connection()
 
             cursor = conn.cursor()
 
             cursor.execute("""
-                SELECT
-                    region
-                FROM hr_catalog.hr_core.leave_balances
-                LIMIT 20
+                SELECT current_user()
             """)
 
             rows = cursor.fetchall()
 
+            st.write(rows)
+
             cursor.close()
             conn.close()
 
-            st.write(
-                "Logged in user:",
-                st.context.headers.get(
-                    "X-Forwarded-Email"
-                )
-            )
-
-            st.dataframe(rows)
-
         except Exception as e:
 
+            import traceback
+
             st.error(str(e))
-# with tab3:
-
-#     st.header("Leave Balances Access Control Test")
-
-#     st.write("""
-#     This demonstrates Unity Catalog row-level security.
-
-#     The same query is executed for every user.
-#     Any differences in results come from Unity Catalog permissions,
-#     not application logic.
-#     """)
-
-#     if st.button("Load Leave Balance Data"):
-
-#         try:
-
-#             response = w.statement_execution.execute_statement(
-#                 warehouse_id=WAREHOUSE_ID,
-#                 statement="""
-#                 SELECT current_user();
-#                 """,
-#                 wait_timeout="30s"
-#             )
-
-#             st.success("Query executed successfully")
-
-#             # st.json(response.as_dict())
-#             # st.json(response.as_dict()["manifest"]["schema"]["columns"])
-#             result = response.as_dict()
-
-#             st.write("Top-level keys")
-#             st.write(list(result.keys()))
-            
-#             for key, value in result.items():
-#                 st.subheader(key)
-#                 st.json(value)
-
-#         except Exception as e:
-
-#             st.error(str(e))
+            st.code(traceback.format_exc())
