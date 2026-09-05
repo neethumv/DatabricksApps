@@ -302,9 +302,41 @@ with tab3:
                 )
             )
 
-            st.subheader("Query Response")
+            # st.subheader("Query Response")
 
-            st.json(response.as_dict())
+            # st.json(response.as_dict())
+
+
+            result_dict = response.as_dict()
+            
+            # Extract column names
+            columns = [
+                col["name"]
+                for col in result_dict["manifest"]["schema"]["columns"]
+            ]
+            
+            # Extract rows
+            rows = result_dict["result"]["data_array"]
+            
+            # Build dataframe
+            df = pd.DataFrame(rows, columns=columns)
+            
+            # Convert numeric columns
+            if "employee_count" in df.columns:
+                df["employee_count"] = pd.to_numeric(
+                    df["employee_count"],
+                    errors="coerce"
+                )
+            
+            st.success(f"Logged in as: {user_email}")
+            
+            st.subheader("Leave Balance Summary by Region")
+            
+            st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True
+            )
 
         except Exception as e:
 
