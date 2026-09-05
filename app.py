@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 from databricks.sdk import WorkspaceClient
 
 SPACE_ID = "01f1a7cce8341affb459c8c51394741b"
@@ -19,41 +20,57 @@ if st.button("Ask"):
 
     if not question.strip():
         st.warning("Please enter a question.")
-    else:
+        st.stop()
 
-        try:
+    try:
 
-            w = WorkspaceClient()
+        w = WorkspaceClient()
 
-            response = w.api_client.do(
-                "POST",
-                f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
-                body={
-                    "content": question
-                }
-            )
+        # Submit question
+        response = w.api_client.do(
+            "POST",
+            f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
+            body={
+                "content": question
+            }
+        )
 
-            message_id = response["message_id"]
+        conversation_id = response["conversation_id"]
+        message_id = response["message_id"]
 
-            # Get completed Genie response
+        answer = None
+
+        # Poll for completion (up to ~30 seconds)
+        for _ in range(15):
+
+            time.sleep(2)
+
             message = w.api_client.do(
                 "GET",
-                f"/api/2.0/genie/spaces/{SPACE_ID}/messages/{message_id}"
+                f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
             )
 
-            answer = "No answer returned"
+            if message.get("status") == "COMPLETED":
 
-            for attachment in message.get("attachments", []):
+                for attachment in message.get("attachments", []):
 
-                if "text" in attachment:
-                    answer = attachment["text"]["content"]
-                    break
+                    if "text" in attachment:
+                        answer = attachment["text"]["content"]
+                        break
 
-            st.subheader("Question")
-            st.write(question)
+                break
 
-            st.subheader("Answer")
+        st.subheader("Question")
+        st.write(question)
+
+        st.subheader("Answer")
+
+        if answer:
             st.success(answer)
+        else:
+            st.warning(
+                "Genie did not return an answer within the timeout period."
+            )
 
-        except Exception as e:
-            st.error(str(e))
+    except Exception as e:
+        st.error(str(e))
