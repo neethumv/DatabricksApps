@@ -223,34 +223,34 @@ with tab3:
                 "Loading leave balance data..."
             ):
 
-                response = (
-                    w.statement_execution.execute_statement(
-                        warehouse_id=WAREHOUSE_ID,
-                        statement="""
-                        SELECT
-                            region,
-                            COUNT(*) AS employee_count
-                        FROM hr_catalog.hr_core.leave_balances
-                        GROUP BY region
-                        ORDER BY region
-                        """
-                    )
-                )
+                response = w.statement_execution.execute_statement(
+                                warehouse_id=WAREHOUSE_ID,
+                                statement="""
+                                SELECT
+                                    employee_id,
+                                    region,
+                                    leave_balance
+                                FROM hr_catalog.hr_core.leave_balances
+                                LIMIT 20
+                                """,
+                                wait_timeout="30s"
+                            )
+                st.write(response)
 
-            rows = response.result.data_array
+            # rows = response.result.data_array
 
-            df = pd.DataFrame(
-                rows,
-                columns=[
-                    "Region",
-                    "Employee Count"
-                ]
-            )
+            # df = pd.DataFrame(
+            #     rows,
+            #     columns=[
+            #         "Region",
+            #         "Employee Count"
+            #     ]
+            # )
 
-            st.dataframe(
-                df,
-                use_container_width=True
-            )
+            # st.dataframe(
+            #     df,
+            #     use_container_width=True
+            # )
 
         except Exception as e:
 
