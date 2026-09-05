@@ -2,7 +2,7 @@ import time
 import streamlit as st
 
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.serving import ChatMessage
+from databricks.sdk.service.serving import ChatMessage, ChatMessageRole
 
 # --------------------------------------------------
 # Configuration
