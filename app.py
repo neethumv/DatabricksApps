@@ -49,8 +49,8 @@ if st.button("Ask"):
                     )
                     break
 
-            st.subheader("Answer")
-            st.success(answer)
+            st.subheader("Raw Response")
+            st.json(response)
 
         except Exception as e:
 
