@@ -220,8 +220,8 @@ with tab3:
             st.write(list(result.keys()))
             
             for key, value in result.items():
-            st.subheader(key)
-            st.json(value)
+                st.subheader(key)
+                st.json(value)
 
         except Exception as e:
 
