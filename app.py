@@ -203,18 +203,17 @@ with tab3:
                 warehouse_id=WAREHOUSE_ID,
                 statement="""
                 SELECT
-                region,
-                COUNT(*) AS employee_count
+                region
                 FROM hr_catalog.hr_core.leave_balances
-                GROUP BY region
-                ORDER BY region
+                LIMIT 20
                 """,
                 wait_timeout="30s"
             )
 
             st.success("Query executed successfully")
 
-            st.json(response.as_dict())
+            # st.json(response.as_dict())
+            st.json(response.as_dict()["manifest"]["schema"]["columns"])
 
         except Exception as e:
 
