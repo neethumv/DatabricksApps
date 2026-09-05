@@ -35,263 +35,279 @@ def get_user_client():
 
     return WorkspaceClient(config=cfg)
 
-if st.button("Show Current User"):
 
-    try:
-
-        user_client = get_user_client()
-
-        result = user_client.api_client.do(
-            "GET",
-            "/api/2.0/preview/scim/v2/Me"
-        )
-
-        st.json(result)
-
-    except Exception as e:
-
-        st.error(str(e))
 
 # --------------------------------------------------
 # PAGE SETUP
 # --------------------------------------------------
 
-# st.set_page_config(
-#     page_title="HR AI Assistant",
-#     layout="wide"
-# )
+st.set_page_config(
+    page_title="HR AI Assistant",
+    layout="wide"
+)
 
-# st.title("HR AI Assistant")
+st.title("HR AI Assistant")
 
-# w = WorkspaceClient()
-# # def get_user_client():
+w = WorkspaceClient()
+# def get_user_client():
 
-# #     headers = st.context.headers
+#     headers = st.context.headers
 
-# #     user_token = headers.get(
-# #         "x-forwarded-access-token"
-# #     )
-
-# #     if not user_token:
-# #         raise Exception(
-# #             "User token not found. Ensure User Authorization is enabled."
-# #         )
-
-# #     cfg = Config(
-# #         host=app_client.config.host,
-# #         token=user_token
-# #     )
-
-# #     return WorkspaceClient(config=cfg)
-
-# # if st.button("Show Current User"):
-
-# #     try:
-
-# #         user_client = get_user_client()
-
-# #         response = user_client.statement_execution.execute_statement(
-# #             warehouse_id=WAREHOUSE_ID,
-# #             statement="""
-# #             SELECT current_user() AS current_user
-# #             """,
-# #             wait_timeout="30s"
-# #         )
-
-# #         st.json(response.as_dict())
-
-# #     except Exception as e:
-
-# #         st.error(str(e))
-# # --------------------------------------------------
-# # TABS
-# # --------------------------------------------------
-
-# tab1, tab2, tab3 = st.tabs(
-#     [
-#         "Genie Assistant",
-#         "Model Assistant",
-#         "Leave Balances"
-#     ]
-# )
-
-# # ==================================================
-# # TAB 1 - GENIE ASSISTANT
-# # ==================================================
-
-# with tab1:
-
-#     st.header("HR Genie Assistant")
-
-#     genie_question = st.text_input(
-#         "Ask a question about HR data",
-#         placeholder="How many active employees do we have?"
+#     user_token = headers.get(
+#         "x-forwarded-access-token"
 #     )
 
-#     if st.button("Ask Genie"):
+#     if not user_token:
+#         raise Exception(
+#             "User token not found. Ensure User Authorization is enabled."
+#         )
 
-#         if genie_question.strip():
-
-#             try:
-
-#                 response = w.api_client.do(
-#                     "POST",
-#                     f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
-#                     body={
-#                         "content": genie_question
-#                     }
-#                 )
-
-#                 conversation_id = response["conversation_id"]
-#                 message_id = response["message_id"]
-
-#                 answer = None
-
-#                 with st.spinner(
-#                     "Genie is processing..."
-#                 ):
-
-#                     for _ in range(30):
-
-#                         time.sleep(2)
-
-#                         message = w.api_client.do(
-#                             "GET",
-#                             f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
-#                         )
-
-#                         if message.get("status") == "COMPLETED":
-
-#                             for attachment in message.get(
-#                                 "attachments",
-#                                 []
-#                             ):
-
-#                                 if "text" in attachment:
-
-#                                     answer = attachment[
-#                                         "text"
-#                                     ].get(
-#                                         "content"
-#                                     )
-
-#                                     break
-
-#                             break
-
-#                 st.subheader("Question")
-#                 st.write(genie_question)
-
-#                 st.subheader("Answer")
-
-#                 if answer:
-#                     st.success(answer)
-
-#             except Exception as e:
-
-#                 st.error(
-#                     f"Genie error: {str(e)}"
-#                 )
-
-# # ==================================================
-# # TAB 2 - FOUNDATION MODEL
-# # ==================================================
-
-# with tab2:
-
-#     st.header("Foundation Model Assistant")
-
-#     prompt = st.text_area(
-#         "Enter a prompt",
-#         placeholder="Explain GDPR in one sentence."
+#     cfg = Config(
+#         host=app_client.config.host,
+#         token=user_token
 #     )
 
-#     if st.button("Generate Response"):
+#     return WorkspaceClient(config=cfg)
 
-#         if prompt.strip():
+# if st.button("Show Current User"):
 
-#             try:
+#     try:
 
-#                 with st.spinner(
-#                     "Generating response..."
-#                 ):
+#         user_client = get_user_client()
 
-#                     response = w.serving_endpoints.query(
-#                         name=MODEL_NAME,
-#                         messages=[
-#                             ChatMessage(
-#                                 role="user",
-#                                 content=prompt
-#                             )
-#                         ]
-#                     )
+#         response = user_client.statement_execution.execute_statement(
+#             warehouse_id=WAREHOUSE_ID,
+#             statement="""
+#             SELECT current_user() AS current_user
+#             """,
+#             wait_timeout="30s"
+#         )
 
-#                 answer = (
-#                     response
-#                     .choices[0]
-#                     .message
-#                     .content
-#                 )
+#         st.json(response.as_dict())
 
-#                 st.subheader("Prompt")
-#                 st.write(prompt)
+#     except Exception as e:
 
-#                 st.subheader("Response")
-#                 st.success(answer)
+#         st.error(str(e))
+# --------------------------------------------------
+# TABS
+# --------------------------------------------------
 
-#             except TimeoutError:
+tab1, tab2, tab3 = st.tabs(
+    [
+        "Genie Assistant",
+        "Model Assistant",
+        "Leave Balances"
+    ]
+)
 
-#                 st.warning(
-#                     "Request timed out. Please try again."
-#                 )
+# ==================================================
+# TAB 1 - GENIE ASSISTANT
+# ==================================================
 
-#             except Exception as e:
+with tab1:
 
-#                 st.error(
-#                     f"Model endpoint unavailable: {str(e)}"
-#                 )
+    st.header("HR Genie Assistant")
 
-# # ==================================================
-# # TAB 3 - ACCESS CONTROL TEST
-# # ==================================================
-# with tab3:
+    genie_question = st.text_input(
+        "Ask a question about HR data",
+        placeholder="How many active employees do we have?"
+    )
 
-#     st.header("Leave Balances Access Control Test")
+    if st.button("Ask Genie"):
 
-#     if st.button("Load Leave Balance Data"):
+        if genie_question.strip():
 
-#         try:
+            try:
 
-#             st.write("Headers available:")
-#             st.write(list(st.context.headers.keys()))
+                response = w.api_client.do(
+                    "POST",
+                    f"/api/2.0/genie/spaces/{SPACE_ID}/start-conversation",
+                    body={
+                        "content": genie_question
+                    }
+                )
 
-#             user_token = st.context.headers.get(
-#                 "X-Forwarded-Access-Token"
-#             )
+                conversation_id = response["conversation_id"]
+                message_id = response["message_id"]
 
-#             st.write(
-#                 "Token exists:",
-#                 user_token is not None
-#             )
+                answer = None
 
-#             conn = get_user_connection()
+                with st.spinner(
+                    "Genie is processing..."
+                ):
 
-#             cursor = conn.cursor()
+                    for _ in range(30):
 
-#             cursor.execute("""
-#                 SELECT current_user()
-#             """)
+                        time.sleep(2)
 
-#             rows = cursor.fetchall()
+                        message = w.api_client.do(
+                            "GET",
+                            f"/api/2.0/genie/spaces/{SPACE_ID}/conversations/{conversation_id}/messages/{message_id}"
+                        )
 
-#             st.write(rows)
+                        if message.get("status") == "COMPLETED":
 
-#             cursor.close()
-#             conn.close()
+                            for attachment in message.get(
+                                "attachments",
+                                []
+                            ):
 
-#         except Exception as e:
+                                if "text" in attachment:
 
-#             import traceback
+                                    answer = attachment[
+                                        "text"
+                                    ].get(
+                                        "content"
+                                    )
 
-#             st.error(str(e))
-#             st.code(traceback.format_exc())
+                                    break
+
+                            break
+
+                st.subheader("Question")
+                st.write(genie_question)
+
+                st.subheader("Answer")
+
+                if answer:
+                    st.success(answer)
+
+            except Exception as e:
+
+                st.error(
+                    f"Genie error: {str(e)}"
+                )
+
+# ==================================================
+# TAB 2 - FOUNDATION MODEL
+# ==================================================
+
+with tab2:
+
+    st.header("Foundation Model Assistant")
+
+    prompt = st.text_area(
+        "Enter a prompt",
+        placeholder="Explain GDPR in one sentence."
+    )
+
+    if st.button("Generate Response"):
+
+        if prompt.strip():
+
+            try:
+
+                with st.spinner(
+                    "Generating response..."
+                ):
+
+                    response = w.serving_endpoints.query(
+                        name=MODEL_NAME,
+                        messages=[
+                            ChatMessage(
+                                role="user",
+                                content=prompt
+                            )
+                        ]
+                    )
+
+                answer = (
+                    response
+                    .choices[0]
+                    .message
+                    .content
+                )
+
+                st.subheader("Prompt")
+                st.write(prompt)
+
+                st.subheader("Response")
+                st.success(answer)
+
+            except TimeoutError:
+
+                st.warning(
+                    "Request timed out. Please try again."
+                )
+
+            except Exception as e:
+
+                st.error(
+                    f"Model endpoint unavailable: {str(e)}"
+                )
+
+# ==================================================
+# TAB 3 - ACCESS CONTROL TEST
+# ==================================================
+# ==================================================
+# ACCESS CONTROL TEST
+# ==================================================
+
+with tab3:
+
+    st.header("Leave Balances Access Control Test")
+
+    st.write("""
+    This tab demonstrates Unity Catalog row-level security.
+
+    The same SQL query is executed for every user.
+    Any differences in results come from Unity Catalog
+    permissions and row filters, not application logic.
+    """)
+
+    if st.button("Load Leave Balance Data"):
+
+        try:
+
+            # Build a user-authorized client
+            user_token = st.context.headers.get(
+                "X-Forwarded-Access-Token"
+            )
+
+            from databricks.sdk.core import Config
+
+            user_client = WorkspaceClient(
+                config=Config(
+                    host=w.config.host,
+                    token=user_token,
+                    auth_type="pat"
+                )
+            )
+
+            # Show the logged-in user
+            me = user_client.api_client.do(
+                "GET",
+                "/api/2.0/preview/scim/v2/Me"
+            )
+
+            user_email = me["emails"][0]["value"]
+
+            st.success(
+                f"Logged in as: {user_email}"
+            )
+
+            # Run query as the USER
+            response = (
+                user_client.statement_execution.execute_statement(
+                    warehouse_id=WAREHOUSE_ID,
+                    statement="""
+                    SELECT
+                        region,
+                        COUNT(*) AS employee_count
+                    FROM hr_catalog.hr_core.leave_balances
+                    GROUP BY region
+                    ORDER BY region
+                    """,
+                    wait_timeout="30s"
+                )
+            )
+
+            st.subheader("Query Response")
+
+            st.json(response.as_dict())
+
+        except Exception as e:
+
+            st.error(
+                f"Query failed: {str(e)}"
+            )
